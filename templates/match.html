@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>حریف پیدا شد | ای‌فوتبال یار</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: Tahoma, Arial, sans-serif;
+            background: linear-gradient(145deg, #06140d, #0b2417);
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .box {
+            width: 100%;
+            max-width: 500px;
+            background: rgba(16, 42, 27, 0.96);
+            border: 1px solid rgba(60, 220, 120, 0.25);
+            border-radius: 24px;
+            padding: 28px 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,.35);
+        }
+
+        .logo {
+            text-align: center;
+            font-size: 42px;
+        }
+
+        h1 {
+            text-align: center;
+            margin: 10px 0;
+            font-size: 25px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #b8cfc0;
+            line-height: 1.8;
+        }
+
+        .players {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 10px;
+            align-items: center;
+            margin: 25px 0;
+        }
+
+        .player {
+            background: rgba(255,255,255,.06);
+            border: 1px solid rgba(255,255,255,.08);
+            border-radius: 18px;
+            padding: 18px 10px;
+            text-align: center;
+        }
+
+        .player-icon {
+            font-size: 30px;
+        }
+
+        .player-name {
+            margin-top: 10px;
+            font-weight: bold;
+            word-break: break-word;
+        }
+
+        .rubika {
+            margin-top: 8px;
+            color: #9beab6;
+            font-size: 13px;
+            direction: ltr;
+        }
+
+        .vs {
+            font-weight: bold;
+            color: #5ee68c;
+            font-size: 18px;
+        }
+
+        .notice {
+            background: rgba(245, 190, 60, .08);
+            border: 1px solid rgba(245, 190, 60, .25);
+            border-radius: 15px;
+            padding: 14px;
+            text-align: center;
+            color: #f4d98a;
+            line-height: 1.8;
+            margin-bottom: 20px;
+        }
+
+        .status {
+            text-align: center;
+            padding: 12px;
+            border-radius: 14px;
+            background: rgba(53,212,119,.1);
+            color: #bdf5d0;
+            margin-bottom: 18px;
+        }
+
+        .buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        button,
+        .reject {
+            border: 0;
+            border-radius: 14px;
+            padding: 14px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            text-align: center;
+            text-decoration: none;
+        }
+
+        .confirm {
+            background: #35d477;
+            color: #06200f;
+        }
+
+        .reject {
+            background: #d94b4b;
+            color: white;
+        }
+
+        button:hover,
+        .reject:hover {
+            opacity: .9;
+        }
+
+        .full-info {
+            display: none;
+            margin-top: 20px;
+            background: rgba(53,212,119,.08);
+            border: 1px solid rgba(53,212,119,.25);
+            border-radius: 16px;
+            padding: 16px;
+        }
+
+        .full-info h2 {
+            font-size: 18px;
+            margin-top: 0;
+        }
+
+        .info-row {
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(255,255,255,.08);
+        }
+
+        .info-row:last-child {
+            border-bottom: 0;
+        }
+
+        .success {
+            display: none;
+            text-align: center;
+            margin-top: 18px;
+            color: #7ff0a7;
+            font-weight: bold;
+            line-height: 1.8;
+        }
+
+        @media (max-width: 420px) {
+            .players {
+                grid-template-columns: 1fr;
+            }
+
+            .vs {
+                text-align: center;
+            }
+
+            .buttons {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="box">
+
+    <div class="logo">⚔️</div>
+
+    <h1>حریف پیدا شد!</h1>
+
+    <p class="subtitle">
+        قبل از شروع بازی، هر دو بازیکن باید حریف خود را تأیید کنند.
+    </p>
+
+    <div class="players">
+
+        <div class="player">
+            <div class="player-icon">👤</div>
+
+            <div class="player-name">
+                {{ match.player1_name }}
+            </div>
+
+            <div class="rubika">
+                اطلاعات تماس مخفی
+            </div>
+        </div>
+
+        <div class="vs">VS</div>
+
+        <div class="player">
+            <div class="player-icon">👤</div>
+
+            <div class="player-name">
+                {{ match.player2_name }}
+            </div>
+
+            <div class="rubika">
+                اطلاعات تماس مخفی
+            </div>
+        </div>
+
+    </div>
+
+    <div class="notice" id="notice">
+        🔒 اطلاعات کامل روبیکا بعد از تأیید هر دو بازیکن نمایش داده می‌شود.
+    </div>
+
+    <div class="status" id="status">
+        ⏳ منتظر تأیید هر دو بازیکن...
+    </div>
+
+    <div class="buttons">
+
+        <button class="confirm" onclick="confirmMatch()">
+            ✅ تأیید حریف
+        </button>
+
+        <form action="/match/{{ match.id }}/reject" method="POST">
+            <button class="reject" type="submit">
+                ❌ رد کردن
+            </button>
+        </form>
+
+    </div>
+
+    <div class="full-info" id="fullInfo">
+
+        <h2>🎮 اطلاعات بازی</h2>
+
+        <div class="info-row">
+            👤 بازیکن اول:
+            <strong>{{ match.player1_name }}</strong>
+        </div>
+
+        <div class="info-row">
+            🆔 روبیکا:
+            <strong dir="ltr">{{ match.player1_rubika }}</strong>
+        </div>
+
+        <div class="info-row">
+            👤 بازیکن دوم:
+            <strong>{{ match.player2_name }}</strong>
+        </div>
+
+        <div class="info-row">
+            🆔 روبیکا:
+            <strong dir="ltr">{{ match.player2_rubika }}</strong>
+        </div>
+
+        {% if match.judge %}
+        <div class="info-row">
+            ⚖️ داور:
+            <strong>{{ match.judge.name }}</strong>
+        </div>
+
+        <div class="info-row">
+            🆔 آیدی داور:
+            <strong dir="ltr">{{ match.judge.rubika_id }}</strong>
+        </div>
+        {% endif %}
+
+    </div>
+
+    <div class="success" id="success">
+        🎉 هر دو بازیکن تأیید کردند!
+        <br>
+        اطلاعات کامل بازی نمایش داده شد.
+    </div>
+
+</div>
+
+<script>
+    let alreadyConfirmed = false;
+
+    async function confirmMatch() {
+        if (alreadyConfirmed) return;
+
+        try {
+            const response = await fetch(
+                "/match/{{ match.id }}/confirm",
+                {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    }
+                }
+            );
+
+            if (!response.ok) {
+                alert("خطایی رخ داد. دوباره امتحان کن.");
+                return;
+            }
+
+            const data = await response.json();
+
+            alreadyConfirmed = true;
+
+            document.getElementById("status").textContent =
+                data.both
+                    ? "✅ هر دو بازیکن تأیید کردند."
+                    : "⏳ تأیید شما ثبت شد؛ منتظر بازیکن دیگر هستیم.";
+
+            if (data.both) {
+                showFullInfo();
+            }
+
+        } catch (error) {
+            console.log(error);
+            alert("ارتباط با سرور برقرار نشد.");
+        }
+    }
+
+    function showFullInfo() {
+        document.getElementById("fullInfo").style.display = "block";
+        document.getElementById("success").style.display = "block";
+        document.getElementById("notice").style.display = "none";
+    }
+
+    async function checkMatch() {
+        try {
+            const response = await fetch(
+                "/api/match/{{ match.id }}",
+                {
+                    cache: "no-store"
+                }
+            );
+
+            if (!response.ok) return;
+
+            const data = await response.json();
+
+            if (data.status === "confirmed") {
+                showFullInfo();
+
+                document.getElementById("status").textContent =
+                    "✅ هر دو بازیکن تأیید کردند.";
+            }
+
+        } catch (error) {
+            console.log(error);
+        }
+
+        setTimeout(checkMatch, 2500);
+    }
+
+    checkMatch();
+</script>
+
+</body>
+</html>
