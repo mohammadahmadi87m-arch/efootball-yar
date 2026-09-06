@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>جستجوی حریف | ای‌فوتبال یار</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: Tahoma, Arial, sans-serif;
+            background: linear-gradient(145deg, #06140d, #0b2417);
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .box {
+            width: 100%;
+            max-width: 430px;
+            background: rgba(16, 42, 27, 0.95);
+            border: 1px solid rgba(60, 220, 120, 0.25);
+            border-radius: 24px;
+            padding: 30px 22px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+        }
+
+        .logo {
+            font-size: 42px;
+            margin-bottom: 12px;
+        }
+
+        h1 {
+            margin: 0 0 10px;
+            font-size: 25px;
+        }
+
+        .text {
+            color: #b8cfc0;
+            line-height: 1.9;
+            margin-bottom: 25px;
+        }
+
+        .loader {
+            width: 65px;
+            height: 65px;
+            margin: 20px auto;
+            border: 5px solid rgba(255,255,255,0.15);
+            border-top-color: #35d477;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .status {
+            background: rgba(53, 212, 119, 0.1);
+            border: 1px solid rgba(53, 212, 119, 0.25);
+            border-radius: 14px;
+            padding: 14px;
+            color: #bdf5d0;
+            margin-bottom: 20px;
+        }
+
+        button {
+            width: 100%;
+            border: 0;
+            border-radius: 14px;
+            padding: 14px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            background: #d94b4b;
+            color: white;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        .back {
+            display: block;
+            margin-top: 18px;
+            color: #9beab6;
+            text-decoration: none;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="box">
+
+    <div class="logo">⚔️</div>
+
+    <h1>در حال پیدا کردن حریف</h1>
+
+    <p class="text">
+        کمی صبر کن...<br>
+        داریم دنبال بازیکنی می‌گردیم که آماده بازی باشد.
+    </p>
+
+    <div class="loader"></div>
+
+    <div class="status" id="status">
+        🔎 در حال جستجو...
+    </div>
+
+    <form action="/cancel-queue" method="POST">
+        <button type="submit">لغو جستجو</button>
+    </form>
+
+    <a class="back" href="/">
+        بازگشت به صفحه اصلی
+    </a>
+
+</div>
+
+<script>
+    async function checkQueue() {
+        try {
+            const response = await fetch("/api/queue-status", {
+                cache: "no-store"
+            });
+
+            const data = await response.json();
+
+            if (data.matched && data.redirect) {
+                document.getElementById("status").textContent =
+                    "✅ حریف پیدا شد!";
+
+                setTimeout(() => {
+                    window.location.href = data.redirect;
+                }, 500);
+
+                return;
+            }
+
+        } catch (error) {
+            console.log("خطا در بررسی صف:", error);
+        }
+
+        setTimeout(checkQueue, 2500);
+    }
+
+    checkQueue();
+</script>
+
+</body>
+</html>
