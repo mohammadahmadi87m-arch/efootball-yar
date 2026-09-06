@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>پنل مدیریت | ای‌فوتبال یار</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Tahoma, Arial, sans-serif;
+            background: #07150d;
+            color: white;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1100px;
+            margin: auto;
+            padding: 20px 15px 50px;
+        }
+
+        header {
+            background: #102a1b;
+            border: 1px solid rgba(53, 212, 119, .2);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+
+        header p {
+            margin: 8px 0 0;
+            color: #a9c3b1;
+        }
+
+        .logout {
+            background: #d94b4b;
+            color: white;
+            text-decoration: none;
+            padding: 11px 15px;
+            border-radius: 12px;
+            white-space: nowrap;
+        }
+
+        section {
+            background: #102a1b;
+            border: 1px solid rgba(255,255,255,.07);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        section h2 {
+            margin-top: 0;
+            font-size: 20px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 13px;
+            border-radius: 12px;
+            border: 1px solid #31583e;
+            background: #081a10;
+            color: white;
+            font-family: inherit;
+            outline: none;
+        }
+
+        .full {
+            grid-column: 1 / -1;
+        }
+
+        button {
+            border: 0;
+            border-radius: 12px;
+            padding: 13px 18px;
+            font-family: inherit;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .add {
+            background: #35d477;
+            color: #06200f;
+        }
+
+        .delete {
+            background: #d94b4b;
+            color: white;
+            padding: 9px 13px;
+        }
+
+        .toggle {
+            background: #315f42;
+            color: white;
+            padding: 9px 13px;
+        }
+
+        .table-wrap {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 650px;
+        }
+
+        th,
+        td {
+            padding: 12px 10px;
+            border-bottom: 1px solid rgba(255,255,255,.08);
+            text-align: right;
+        }
+
+        th {
+            color: #8ff0af;
+        }
+
+        td {
+            color: #d6e1da;
+        }
+
+        .empty {
+            color: #91a99a;
+            padding: 15px 0;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 5px 9px;
+            border-radius: 8px;
+            font-size: 12px;
+        }
+
+        .active {
+            background: rgba(53,212,119,.12);
+            color: #8ff0af;
+        }
+
+        .inactive {
+            background: rgba(217,75,75,.12);
+            color: #ff9b9b;
+        }
+
+        .actions {
+            display: flex;
+            gap: 7px;
+            flex-wrap: wrap;
+        }
+
+        @media (max-width: 650px) {
+
+            header {
+                flex-direction: column;
+                align-items: stretch;
+                text-align: center;
+            }
+
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .full {
+                grid-column: auto;
+            }
+
+            .logout {
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <header>
+        <div>
+            <h1>🎮 پنل مدیریت ای‌فوتبال یار</h1>
+            <p>مدیریت کاپ‌ها، داورها و صف پیدا کردن حریف</p>
+        </div>
+
+        <a class="logout" href="/admin/logout">
+            خروج
+        </a>
+    </header>
+
+
+    <!-- افزودن کاپ -->
+
+    <section>
+
+        <h2>🏆 افزودن کاپ</h2>
+
+        <form method="POST" action="/admin/cups/add">
+
+            <div class="form-grid">
+
+                <input
+                    type="text"
+                    name="name"
+                    placeholder="نام کاپ"
+                    required
+                >
+
+                <input
+                    type="number"
+                    name="teams_count"
+                    placeholder="تعداد تیم‌ها"
+                    min="2"
+                    required
+                >
+
+                <input
+                    type="text"
+                    name="format_type"
+                    placeholder="نوع مسابقات؛ مثال: حذفی"
+                    required
+                >
+
+                <input
+                    type="text"
+                    name="prize"
+                    placeholder="توضیحات کاپ"
+                    required
+                >
+
+                <input
+                    type="text"
+                    name="entry_fee"
+                    placeholder="اطلاعات ثبت‌نام"
+                    required
+                >
+
+                <input
+                    type="text"
+                    name="organizer_rubika"
+                    placeholder="آیدی روبیکای برگزارکننده"
+                    required
+                >
+
+                <input
+                    type="text"
+                    name="channel_rubika"
+                    placeholder="آیدی کانال"
+                    required
+                >
+
+                <select name="status" required>
+                    <option value="open">ثبت‌نام</option>
+                    <option value="full">تکمیل ظرفیت</option>
+                    <option value="ended">پایان یافته</option>
+                </select>
+
+                <button class="add full" type="submit">
+                    ➕ افزودن کاپ
+                </button>
+
+            </div>
+
+        </form>
+
+    </section>
+
+
+    <!-- لیست کاپ‌ها -->
+
+    <section>
+
+        <h2>📋 کاپ‌های ثبت‌شده</h2>
+
+        {% if cups %}
+
+        <div class="table-wrap">
+
+            <table>
+
+                <thead>
+                    <tr>
+                        <th>نام</th>
+                        <th>تعداد</th>
+                        <th>نوع</th>
+                        <th>وضعیت</th>
+                        <th>عملیات</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                {% for cup in cups %}
+
+                    <tr>
+
+                        <td>{{ cup.name }}</td>
+
+                        <td>{{ cup.teams_count }}</td>
+
+                        <td>{{ cup.format_type }}</td>
+
+                        <td>
+                            {% if cup.status == "open" %}
+                                <span class="badge active">ثبت‌نام</span>
+                            {% elif cup.status == "full" %}
+                                <span class="badge">تکمیل ظرفیت</span>
+                            {% else %}
+                                <span class="badge inactive">پایان یافته</span>
+                            {% endif %}
+                        </td>
+
+                        <td>
+
+                            <form
+                                method="POST"
+                                action="/admin/cups/{{ cup.id }}/delete"
+                                onsubmit="return confirm('این کاپ حذف شود؟');"
+                            >
+                                <button class="delete" type="submit">
+                                    حذف
+                                </button>
+                            </form>
+
+                        </td>
+
+                    </tr>
+
+                {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+        {% else %}
+
+            <div class="empty">
+                هنوز کاپی اضافه نشده است.
+            </div>
+
+        {% endif %}
+
+    </section>
+
+
+    <!-- افزودن داور -->
+
+    <section>
+
+        <h2>⚖️ مدیریت داورها</h2>
+
+        <form method="POST" action="/admin/judges/add">
+
+            <div class="form-grid">
+
+                <input
+                    type="text"
+                    name="name"
+                    placeholder="نام داور"
+                    required
+                >
+
+                <input
+                    type="text"
+                    name="rubika_id"
+                    placeholder="آیدی روبیکای داور"
+                    required
+                >
+
+                <button class="add full" type="submit">
+                    ➕ افزودن داور
+                </button>
+
+            </div>
+
+        </form>
+
+
+        {% if judges %}
+
+        <div class="table-wrap" style="margin-top:20px;">
+
+            <table>
+
+                <thead>
+                    <tr>
+                        <th>نام</th>
+                        <th>آیدی</th>
+                        <th>وضعیت</th>
+                        <th>عملیات</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                {% for judge in judges %}
+
+                    <tr>
+
+                        <td>{{ judge.name }}</td>
+
+                        <td dir="ltr">
+                            {{ judge.rubika_id }}
+                        </td>
+
+                        <td>
+                            {% if judge.active %}
+                                <span class="badge active">فعال</span>
+                            {% else %}
+                                <span class="badge inactive">غیرفعال</span>
+                            {% endif %}
+                        </td>
+
+                        <td>
+
+                            <form
+                                method="POST"
+                                action="/admin/judges/{{ judge.id }}/toggle"
+                            >
+                                <button class="toggle" type="submit">
+                                    تغییر وضعیت
+                                </button>
+                            </form>
+
+                        </td>
+
+                    </tr>
+
+                {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+        {% else %}
+
+            <div class="empty">
+                هنوز داوری اضافه نشده است.
+            </div>
+
+        {% endif %}
+
+    </section>
+
+
+    <!-- صف حریف‌ها -->
+
+    <section>
+
+        <h2>⚔️ صف پیدا کردن حریف</h2>
+
+        {% if queue %}
+
+        <div class="table-wrap">
+
+            <table>
+
+                <thead>
+                    <tr>
+                        <th>نام</th>
+                        <th>آیدی</th>
+                        <th>حالت</th>
+                        <th>زمان ورود</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                {% for player in queue %}
+
+                    <tr>
+
+                        <td>{{ player.name }}</td>
+
+                        <td dir="ltr">
+                            {{ player.rubika_id }}
+                        </td>
+
+                        <td>
+                            {% if player.mode == "friendly" %}
+                                دوستانه
+                            {% else %}
+                                رقابتی
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            {{ player.created_at.strftime("%Y-%m-%d %H:%M") }}
+                        </td>
+
+                    </tr>
+
+                {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+        {% else %}
+
+            <div class="empty">
+                فعلاً بازیکنی در صف انتظار نیست.
+            </div>
+
+        {% endif %}
+
+    </section>
+
+</div>
+
+</body>
+</html>
