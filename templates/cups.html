@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>کاپ‌ها | ای‌فوتبال یار</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Tahoma, Arial, sans-serif;
+            background: linear-gradient(145deg, #06140d, #0b2417);
+            color: white;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 850px;
+            margin: auto;
+            padding: 25px 16px 40px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .logo {
+            font-size: 45px;
+        }
+
+        h1 {
+            margin: 10px 0;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            color: #b8cfc0;
+            line-height: 1.8;
+        }
+
+        .cup {
+            background: rgba(16, 42, 27, .96);
+            border: 1px solid rgba(53, 212, 119, .22);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: 0 12px 35px rgba(0,0,0,.2);
+        }
+
+        .cup-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .cup-title h2 {
+            margin: 0;
+            font-size: 20px;
+        }
+
+        .status {
+            padding: 7px 11px;
+            border-radius: 10px;
+            background: rgba(53,212,119,.12);
+            color: #8ff0af;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+
+        .status.full {
+            background: rgba(245,190,60,.12);
+            color: #f4d98a;
+        }
+
+        .status.ended {
+            background: rgba(217,75,75,.12);
+            color: #ff9b9b;
+        }
+
+        .details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 18px;
+        }
+
+        .detail {
+            background: rgba(255,255,255,.045);
+            border-radius: 13px;
+            padding: 12px;
+            color: #c9d8ce;
+            font-size: 14px;
+            line-height: 1.7;
+        }
+
+        .detail strong {
+            display: block;
+            color: white;
+            margin-top: 3px;
+        }
+
+        .message {
+            border-top: 1px solid rgba(255,255,255,.08);
+            padding-top: 15px;
+            color: #b8cfc0;
+            line-height: 1.8;
+            font-size: 14px;
+        }
+
+        .contact {
+            margin-top: 10px;
+            color: #8ff0af;
+            direction: ltr;
+            text-align: right;
+        }
+
+        .empty {
+            text-align: center;
+            background: rgba(255,255,255,.05);
+            border-radius: 20px;
+            padding: 35px 20px;
+            color: #b8cfc0;
+        }
+
+        .back {
+            display: block;
+            width: 100%;
+            max-width: 300px;
+            margin: 25px auto 0;
+            padding: 14px;
+            text-align: center;
+            text-decoration: none;
+            color: #06200f;
+            background: #35d477;
+            border-radius: 14px;
+            font-weight: bold;
+        }
+
+        @media (max-width: 550px) {
+            .details {
+                grid-template-columns: 1fr;
+            }
+
+            .cup-title {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <div class="header">
+        <div class="logo">🏆</div>
+
+        <h1>کاپ‌های ای‌فوتبال یار</h1>
+
+        <div class="subtitle">
+            کاپ‌های فعال eFootball را ببین و برای ثبت‌نام با برگزارکننده در ارتباط باش.
+        </div>
+    </div>
+
+
+    {% if cups %}
+
+        {% for cup in cups %}
+
+        <div class="cup">
+
+            <div class="cup-title">
+
+                <h2>{{ cup.name }}</h2>
+
+                {% if cup.status == "open" %}
+                    <span class="status">🟢 ثبت‌نام</span>
+
+                {% elif cup.status == "full" %}
+                    <span class="status full">🟡 تکمیل ظرفیت</span>
+
+                {% else %}
+                    <span class="status ended">🔴 پایان یافته</span>
+                {% endif %}
+
+            </div>
+
+
+            <div class="details">
+
+                <div class="detail">
+                    👥 تعداد تیم‌ها
+                    <strong>{{ cup.teams_count }}</strong>
+                </div>
+
+                <div class="detail">
+                    🎮 نوع مسابقات
+                    <strong>{{ cup.format_type }}</strong>
+                </div>
+
+                <div class="detail">
+                    👤 آیدی برگزارکننده
+                    <strong dir="ltr">{{ cup.organizer_rubika }}</strong>
+                </div>
+
+                <div class="detail">
+                    📢 کانال
+                    <strong dir="ltr">{{ cup.channel_rubika }}</strong>
+                </div>
+
+            </div>
+
+
+            {% if cup.status == "open" %}
+
+                <div class="message">
+                    برای ثبت‌نام از طریق آیدی برگزارکننده پیام دهید.
+
+                    <div class="contact">
+                        {{ cup.organizer_rubika }}
+                    </div>
+                </div>
+
+            {% elif cup.status == "full" %}
+
+                <div class="message">
+                    ظرفیت این کاپ تکمیل شده است.
+                </div>
+
+            {% else %}
+
+                <div class="message">
+                    ثبت‌نام این کاپ به پایان رسیده است.
+                </div>
+
+            {% endif %}
+
+        </div>
+
+        {% endfor %}
+
+    {% else %}
+
+        <div class="empty">
+            🏆
+            <br><br>
+            در حال حاضر کاپی برای نمایش وجود ندارد.
+        </div>
+
+    {% endif %}
+
+
+    <a class="back" href="/">
+        برگشت به صفحه اصلی
+    </a>
+
+</div>
+
+</body>
+</html>
