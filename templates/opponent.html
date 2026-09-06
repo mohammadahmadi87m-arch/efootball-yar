@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>پیدا کردن حریف | ای‌فوتبال یار</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: Tahoma, Arial, sans-serif;
+            min-height: 100vh;
+            background:
+                radial-gradient(circle at top, #123d29, #06140d 60%);
+            color: white;
+        }
+
+        .container {
+            width: 92%;
+            max-width: 650px;
+            margin: auto;
+        }
+
+        header {
+            padding: 22px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            color: #55e69a;
+            font-size: 22px;
+            font-weight: bold;
+        }
+
+        .back {
+            color: #b9cfc3;
+            text-decoration: none;
+            font-size: 13px;
+        }
+
+        .box {
+            margin-top: 35px;
+            background: rgba(10, 35, 24, .95);
+            border: 1px solid rgba(85, 230, 154, .2);
+            border-radius: 22px;
+            padding: 28px 22px;
+            box-shadow: 0 15px 40px rgba(0,0,0,.3);
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 27px;
+            margin-bottom: 10px;
+        }
+
+        .description {
+            text-align: center;
+            color: #a9c5b6;
+            font-size: 13px;
+            line-height: 2;
+            margin-bottom: 28px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #cce0d5;
+            font-size: 13px;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 13px;
+            border-radius: 11px;
+            border: 1px solid rgba(255,255,255,.1);
+            background: #071b12;
+            color: white;
+            outline: none;
+            margin-bottom: 18px;
+        }
+
+        input:focus,
+        select:focus {
+            border-color: #55e69a;
+        }
+
+        .mode-title {
+            font-size: 14px;
+            margin-bottom: 12px;
+            color: #cce0d5;
+        }
+
+        .modes {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 18px;
+        }
+
+        .mode {
+            border: 1px solid rgba(85,230,154,.2);
+            border-radius: 13px;
+            padding: 14px;
+            cursor: pointer;
+            text-align: center;
+            background: #081d13;
+        }
+
+        .mode input {
+            width: auto;
+            margin: 0 5px 0 0;
+        }
+
+        .mode strong {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .mode small {
+            color: #8fa99d;
+        }
+
+        .prize {
+            display: none;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border: 0;
+            border-radius: 12px;
+            background: #55e69a;
+            color: #062016;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .btn:hover {
+            background: #75f2b0;
+        }
+
+        .note {
+            margin-top: 20px;
+            padding: 14px;
+            border-radius: 12px;
+            background: rgba(85,230,154,.06);
+            color: #9eb8aa;
+            font-size: 12px;
+            line-height: 2;
+            text-align: center;
+        }
+
+        @media(max-width:500px) {
+            .modes {
+                grid-template-columns: 1fr;
+            }
+
+            .box {
+                margin-top: 20px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <header>
+        <div class="logo">⚽ ای‌فوتبال یار</div>
+        <a href="/" class="back">← صفحه اصلی</a>
+    </header>
+
+    <div class="box">
+
+        <h1>⚔️ پیدا کردن حریف</h1>
+
+        <p class="description">
+            اطلاعاتت رو وارد کن و وارد صف جستجو شو.
+            وقتی بازیکن مناسبی پیدا بشه، هر دو طرف باید حریف رو تأیید کنند.
+        </p>
+
+        <form action="/queue" method="POST">
+
+            <label for="name">نام شما</label>
+
+            <input
+                type="text"
+                id="name"
+                name="name"
+                placeholder="مثلاً محمد"
+                required
+                maxlength="120"
+            >
+
+            <label for="rubika_id">آیدی روبیکا</label>
+
+            <input
+                type="text"
+                id="rubika_id"
+                name="rubika_id"
+                placeholder="آیدی روبیکا"
+                required
+                maxlength="120"
+            >
+
+            <div class="mode-title">
+                نوع بازی را انتخاب کن
+            </div>
+
+            <div class="modes">
+
+                <label class="mode">
+                    <input
+                        type="radio"
+                        name="mode"
+                        value="friendly"
+                        checked
+                        onchange="showPrize(false)"
+                    >
+
+                    <strong>🎮 دوستانه</strong>
+
+                    <small>
+                        بازی دوستانه
+                    </small>
+                </label>
+
+                <label class="mode">
+                    <input
+                        type="radio"
+                        name="mode"
+                        value="prize"
+                        onchange="showPrize(true)"
+                    >
+
+                    <strong>🏆 رقابتی</strong>
+
+                    <small>
+                        با داور
+                    </small>
+                </label>
+
+            </div>
+
+            <div class="prize" id="prizeBox">
+
+                <label for="prize_level">
+                    سطح مسابقه
+                </label>
+
+                <select id="prize_level" name="prize_level">
+
+                    <option value="light">
+                        سطح سبک
+                    </option>
+
+                    <option value="ideal">
+                        سطح متوسط
+                    </option>
+
+                    <option value="heavy">
+                        سطح سنگین
+                    </option>
+
+                </select>
+
+            </div>
+
+            <button type="submit" class="btn">
+                🔎 شروع جستجوی حریف
+            </button>
+
+        </form>
+
+        <div class="note">
+            🔐 اطلاعات کامل حریف تا قبل از تأیید دوطرفه نمایش داده نمی‌شود.
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+function showPrize(show) {
+    const box = document.getElementById("prizeBox");
+
+    if (show) {
+        box.style.display = "block";
+    } else {
+        box.style.display = "none";
+    }
+}
+</script>
+
+</body>
+</html>
