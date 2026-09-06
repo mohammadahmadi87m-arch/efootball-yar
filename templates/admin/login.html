@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ورود مدیر | ای‌فوتبال یار</title>
+
+    <style>
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: Tahoma, Arial, sans-serif;
+            background: linear-gradient(145deg, #06140d, #0b2417);
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .box {
+            width: 100%;
+            max-width: 420px;
+            background: #102a1b;
+            border-radius: 24px;
+            padding: 30px 22px;
+            box-shadow: 0 20px 60px rgba(0,0,0,.4);
+        }
+
+        .logo {
+            text-align: center;
+            font-size: 45px;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 24px;
+            margin: 12px 0 25px;
+        }
+
+        label {
+            display: block;
+            margin: 14px 0 7px;
+            color: #c9d8ce;
+        }
+
+        input {
+            width: 100%;
+            padding: 14px;
+            border: 1px solid #31583e;
+            border-radius: 13px;
+            background: #081a10;
+            color: white;
+            outline: none;
+            font-size: 15px;
+        }
+
+        button {
+            width: 100%;
+            margin-top: 22px;
+            padding: 14px;
+            border: 0;
+            border-radius: 13px;
+            background: #35d477;
+            color: #06200f;
+            font-weight: bold;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        .error {
+            background: rgba(217,75,75,.12);
+            border: 1px solid rgba(217,75,75,.3);
+            color: #ffabab;
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .back {
+            display: block;
+            text-align: center;
+            margin-top: 20px;
+            color: #9beab6;
+            text-decoration: none;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="box">
+
+    <div class="logo">🔐</div>
+
+    <h1>ورود به پنل مدیریت</h1>
+
+    {% if error %}
+        <div class="error">{{ error }}</div>
+    {% endif %}
+
+    <form method="POST">
+
+        <label>نام کاربری</label>
+        <input
+            type="text"
+            name="username"
+            required
+            autocomplete="username"
+        >
+
+        <label>رمز عبور</label>
+        <input
+            type="password"
+            name="password"
+            required
+            autocomplete="current-password"
+        >
+
+        <button type="submit">
+            ورود به پنل
+        </button>
+
+    </form>
+
+    <a class="back" href="/">
+        برگشت به ای‌فوتبال یار
+    </a>
+
+</div>
+
+</body>
+</html>
