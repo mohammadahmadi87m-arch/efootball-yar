@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>ایفوتبال یار</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: Tahoma, Arial, sans-serif;
+        }
+
+        body {
+            min-height: 100vh;
+            background:
+                radial-gradient(circle at top, #123f2c 0%, #071a13 45%, #030907 100%);
+            color: white;
+        }
+
+        .container {
+            width: 92%;
+            max-width: 1000px;
+            margin: auto;
+        }
+
+        header {
+            padding: 25px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 27px;
+            font-weight: bold;
+            color: #39e58c;
+        }
+
+        .logo span {
+            color: white;
+        }
+
+        .online {
+            background: rgba(57, 229, 140, 0.12);
+            border: 1px solid rgba(57, 229, 140, 0.3);
+            padding: 8px 13px;
+            border-radius: 20px;
+            font-size: 12px;
+            color: #7dffb5;
+        }
+
+        .hero {
+            text-align: center;
+            padding: 55px 10px 35px;
+        }
+
+        .hero h1 {
+            font-size: 42px;
+            margin-bottom: 18px;
+        }
+
+        .hero h1 span {
+            color: #39e58c;
+        }
+
+        .hero p {
+            color: #b5c7bf;
+            font-size: 16px;
+            line-height: 2;
+        }
+
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 22px;
+            margin: 35px 0;
+        }
+
+        .card {
+            background: rgba(12, 35, 27, 0.9);
+            border: 1px solid rgba(57, 229, 140, 0.18);
+            border-radius: 22px;
+            padding: 30px;
+            text-align: center;
+            transition: 0.25s;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            border-color: #39e58c;
+            box-shadow: 0 10px 35px rgba(0,0,0,0.3);
+        }
+
+        .icon {
+            font-size: 45px;
+            margin-bottom: 15px;
+        }
+
+        .card h2 {
+            font-size: 22px;
+            margin-bottom: 12px;
+        }
+
+        .card p {
+            color: #aebdb6;
+            font-size: 14px;
+            line-height: 1.9;
+            margin-bottom: 22px;
+        }
+
+        .btn {
+            display: inline-block;
+            text-decoration: none;
+            background: #39e58c;
+            color: #062016;
+            padding: 12px 25px;
+            border-radius: 12px;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+
+        .btn:hover {
+            background: #6df2aa;
+            transform: scale(1.03);
+        }
+
+        .info {
+            margin: 25px 0 45px;
+            background: rgba(8, 25, 19, 0.8);
+            border-radius: 18px;
+            padding: 25px;
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .info h3 {
+            color: #39e58c;
+            margin-bottom: 15px;
+        }
+
+        .info p {
+            color: #b8c6c0;
+            line-height: 2;
+            font-size: 14px;
+        }
+
+        footer {
+            text-align: center;
+            color: #71837b;
+            padding: 25px 0;
+            font-size: 12px;
+        }
+
+        @media (max-width: 650px) {
+            header {
+                padding: 18px 0;
+            }
+
+            .logo {
+                font-size: 21px;
+            }
+
+            .hero {
+                padding-top: 35px;
+            }
+
+            .hero h1 {
+                font-size: 30px;
+            }
+
+            .hero p {
+                font-size: 14px;
+            }
+
+            .cards {
+                grid-template-columns: 1fr;
+            }
+
+            .card {
+                padding: 25px 18px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <header>
+        <div class="logo">
+            ⚽ <span>ایفوتبال</span> یار
+        </div>
+
+        <div class="online">
+            ● آماده بازی
+        </div>
+    </header>
+
+
+    <section class="hero">
+        <h1>
+            به <span>ایفوتبال یار</span> خوش آمدی
+        </h1>
+
+        <p>
+            حریف پیدا کن، در کاپ‌ها شرکت کن<br>
+            و با بازیکن‌های eFootball بازی کن.
+        </p>
+    </section>
+
+
+    <section class="cards">
+
+        <div class="card">
+
+            <div class="icon">⚔️</div>
+
+            <h2>پیدا کردن حریف</h2>
+
+            <p>
+                حالت بازی خودت را انتخاب کن،
+                وارد صف شو و منتظر پیدا شدن حریف مناسب بمان.
+            </p>
+
+            <a href="/opponent" class="btn">
+                پیدا کردن حریف
+            </a>
+
+        </div>
+
+
+        <div class="card">
+
+            <div class="icon">🏆</div>
+
+            <h2>پیدا کردن کاپ</h2>
+
+            <p>
+                کاپ‌های eFootball را ببین،
+                وضعیت ثبت‌نام را بررسی کن و با برگزارکننده ارتباط بگیر.
+            </p>
+
+            <a href="/cups" class="btn">
+                مشاهده کاپ‌ها
+            </a>
+
+        </div>
+
+    </section>
+
+
+    <section class="info">
+
+        <h3>🛡️ سیستم تأیید حریف</h3>
+
+        <p>
+            وقتی یک حریف پیدا شود، اطلاعات کامل بازیکن
+            تا زمانی که هر دو طرف تأیید نکرده باشند نمایش داده نمی‌شود.
+            بعد از تأیید دو طرف، اطلاعات لازم برای هماهنگی بازی نمایش داده خواهد شد.
+        </p>
+
+    </section>
+
+
+    <footer>
+        © 2026 ایفوتبال یار — مخصوص بازیکنان eFootball
+    </footer>
+
+</div>
+
+</body>
+</html>
