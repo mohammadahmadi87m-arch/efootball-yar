@@ -154,6 +154,19 @@ def match_view():
     slot = session.get("player_slot", 1)
     return render_template("match.html", match=match, slot=slot)
 
+@app.route("/api/match/<int:match_id>")
+def match_status(match_id):
+    match = db.session.get(Match, match_id)
+
+    if not match or session.get("match_id") != match_id:
+        return jsonify({"error": "not_found"}), 404
+
+    return jsonify({
+        "status": match.status,
+        "player1_confirmed": match.player1_confirmed,
+        "player2_confirmed": match.player2_confirmed
+    })
+    
 @app.route("/match/<int:match_id>/confirm", methods=["POST"])
 def confirm(match_id):
     match = db.session.get(Match, match_id)
