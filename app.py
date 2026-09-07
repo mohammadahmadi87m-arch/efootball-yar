@@ -257,20 +257,26 @@ def toggle_judge(judge_id):
         db.session.commit()
     return redirect(url_for("admin_dashboard"))
 
-@app.route("/admin/setup")
-def admin_setup():
+def create_admin_from_env():
     if Admin.query.first():
-        return "مدیر قبلاً ساخته شده است.", 403
-    username = request.args.get("username", "admin")
-    password = request.args.get("password")
-    if not password:
-        return "برای ساخت مدیر، ?password=YOUR_PASSWORD را اضافه کنید.", 400
-    db.session.add(Admin(username=username, password_hash=generate_password_hash(password)))
-    db.session.commit()
-    return "مدیر ساخته شد. این آدرس را دیگر استفاده نکنید و سپس /admin بروید."
+        return
 
+    username = os.environ.get("ADMIN_USERNAME")
+    password = os.environ.get("ADMIN_PASSWORD")
+
+    if not username or not password:
+        return
+
+    db.session.add(
+        Admin(
+            username=username,
+            password_hash=generate_password_hash(password)
+        )
+    )
+    db.session.commit()
 with app.app_context():
     db.create_all()
+    create_admin_from_env()
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)), debug=False)
