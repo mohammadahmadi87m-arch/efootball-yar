@@ -98,11 +98,22 @@ def queue():
         session["match_id"] = match.id
         session["player_slot"] = 2
         return redirect(url_for("match_view"))
-    entry = QueueEntry(name=name, rubika_id=rubika_id, mode=mode, prize_level=prize_level)
-    db.session.add(entry)
-    db.session.commit()
-    session["queue_id"] = entry.id
-    return redirect(url_for("waiting"))
+entry = QueueEntry(
+    name=name,
+    rubika_id=rubika_id,
+    mode=mode,
+    prize_level=prize_level
+)
+
+db.session.add(entry)
+db.session.commit()
+
+session["queue_id"] = entry.id
+session["queue_name"] = name
+session["queue_rubika"] = rubika_id
+session["queue_mode"] = mode
+
+return redirect(url_for("waiting"))    
 
 @app.route("/waiting")
 def waiting():
@@ -113,28 +124,73 @@ def waiting():
 @app.route("/api/queue-status")
 def queue_status():
     qid = session.get("queue_id")
+
     if not qid:
         return jsonify({"matched": False})
+
     entry = db.session.get(QueueEntry, qid)
+
+    # اگر رکورد صف حذف شده، بررسی می‌کنیم
+    # آیا برای همین بازیکن Match ساخته شده است یا نه.
     if not entry:
+        name = session.get("queue_name")
+        rubika_id = session.get("queue_rubika")
+        mode = session.get("queue_mode")
+
+        if not name or not rubika_id or not mode:
+            return jsonify({"matched": False})
+
+        match = Match.query.filter(
+            Match.player1_name == name,
+            Match.player1_rubika == rubika_id,
+            Match.mode == mode,
+            Match.status == "pending"
+        ).order_by(Match.id.desc()).first()
+
+        if match:
+            session.pop("queue_id", None)
+            session["match_id"] = match.id
+            session["player_slot"] = 1
+
+            return jsonify({
+                "matched": True,
+                "redirect": url_for("match_view")
+            })
+
         return jsonify({"matched": False})
+
     candidate = QueueEntry.query.filter(
         QueueEntry.mode == entry.mode,
         QueueEntry.prize_level == entry.prize_level,
         QueueEntry.id != entry.id
     ).order_by(QueueEntry.created_at.asc()).first()
+
     if candidate:
-        judge = Judge.query.filter_by(active=True).order_by(Judge.id.asc()).first() if entry.mode == "prize" else None
+        # فقط حالت دوستانه
         match = Match(
-            player1_name=entry.name, player1_rubika=entry.rubika_id,
-            player2_name=candidate.name, player2_rubika=candidate.rubika_id,
-            mode=entry.mode, prize_level=entry.prize_level,
-            judge_id=judge.id if judge else None
+            player1_name=entry.name,
+            player1_rubika=entry.rubika_id,
+            player2_name=candidate.name,
+            player2_rubika=candidate.rubika_id,
+            mode=entry.mode,
+            prize_level=entry.prize_level,
+            judge_id=None
         )
-        db.session.delete(entry); db.session.delete(candidate); db.session.add(match); db.session.commit()
-        session.pop("queue_id", None); session["match_id"] = match.id
+
+        db.session.delete(entry)
+        db.session.delete(candidate)
+        db.session.add(match)
+        db.session.commit()
+
+        session.pop("queue_id", None)
+        session["match_id"] = match.id
         session["player_slot"] = 1
-        return jsonify({"matched": True, "redirect": url_for("match_view")})
+
+        return jsonify({
+            "matched": True,
+            "redirect": url_for("match_view")
+        })
+
     return jsonify({"matched": False})
 
 @app.route("/cancel-queue", methods=["POST"])
