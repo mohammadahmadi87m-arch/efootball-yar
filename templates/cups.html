@@ -92,6 +92,29 @@
             gap: 10px;
             margin-bottom: 18px;
         }
+        <div class="description-box">
+
+    <div class="description-title">
+        📝 توضیحات کاپ
+    </div>
+
+    <div class="description-text">
+        {{ cup.prize }}
+    </div>
+
+</div>
+
+<div class="description-box">
+
+    <div class="description-title">
+        📌 اطلاعات ثبت‌نام
+    </div>
+
+    <div class="description-text">
+        {{ cup.entry_fee }}
+    </div>
+
+</div>
 
         .detail {
             background: rgba(255,255,255,.045);
@@ -156,6 +179,26 @@
             }
         }
     </style>
+    .description-box {
+    background: rgba(255,255,255,.045);
+    border: 1px solid rgba(255,255,255,.07);
+    border-radius: 14px;
+    padding: 14px;
+    margin-top: 12px;
+}
+
+.description-title {
+    color: #8ff0af;
+    font-weight: bold;
+    margin-bottom: 8px;
+}
+
+.description-text {
+    color: #d6e1da;
+    line-height: 1.9;
+    white-space: pre-line;
+}
+    
 </head>
 
 <body>
