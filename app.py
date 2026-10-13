@@ -91,42 +91,74 @@ def queue():
     rubika_id = request.form.get("rubika_id", "").strip()
     mode = request.form.get("mode", "").strip()
     prize_level = request.form.get("prize_level", "").strip() or None
+
     if not name or not rubika_id or mode not in {"friendly", "prize"}:
         return redirect(url_for("opponent"))
+
     if mode == "prize" and prize_level not in {"light", "ideal", "heavy"}:
         return redirect(url_for("opponent"))
 
-    candidate = QueueEntry.query.filter_by(mode=mode, prize_level=prize_level).order_by(QueueEntry.created_at.asc()).first()
+    if mode == "friendly":
+        prize_level = None
+
+    candidate = (
+        QueueEntry.query
+        .filter_by(mode=mode, prize_level=prize_level)
+        .order_by(QueueEntry.created_at.asc(), QueueEntry.id.asc())
+        .first()
+    )
+
     if candidate:
-        judge = Judge.query.filter_by(active=True).order_by(Judge.id.asc()).first() if mode == "prize" else None
+        judge = None
+
+        if mode == "prize":
+            judge = (
+                Judge.query
+                .filter_by(active=True)
+                .order_by(Judge.id.asc())
+                .first()
+            )
+
         match = Match(
-            player1_name=candidate.name, player1_rubika=candidate.rubika_id,
-            player2_name=name, player2_rubika=rubika_id,
-            mode=mode, prize_level=prize_level,
+            player1_name=candidate.name,
+            player1_rubika=candidate.rubika_id,
+            player2_name=name,
+            player2_rubika=rubika_id,
+            mode=mode,
+            prize_level=prize_level,
             judge_id=judge.id if judge else None
         )
+
         db.session.delete(candidate)
         db.session.add(match)
         db.session.commit()
+
+        session.pop("queue_id", None)
         session["match_id"] = match.id
         session["player_slot"] = 2
+
         return redirect(url_for("match_view"))
-entry = QueueEntry(
-    name=name,
-    rubika_id=rubika_id,
-    mode=mode,
-    prize_level=prize_level
-)
 
-db.session.add(entry)
-db.session.commit()
+    entry = QueueEntry(
+        name=name,
+        rubika_id=rubika_id,
+        mode=mode,
+        prize_level=prize_level
+    )
 
-session["queue_id"] = entry.id
-session["queue_name"] = name
-session["queue_rubika"] = rubika_id
-session["queue_mode"] = mode
+    db.session.add(entry)
+    db.session.commit()
 
-return redirect(url_for("waiting"))    
+    session["queue_id"] = entry.id
+    session["queue_name"] = name
+    session["queue_rubika"] = rubika_id
+    session["queue_mode"] = mode
+    session["queue_prize_level"] = prize_level
+
+    session.pop("match_id", None)
+    session.pop("player_slot", None)
+
+    return redirect(url_for("waiting"))  
 
 @app.route("/waiting")
 def waiting():
