@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}ایفوتبال یار{% endblock %}</title>
+  <style>
+    :root{--bg:#07130f;--panel:#10251c;--panel2:#163528;--green:#27d17c;--green2:#16a765;--text:#effff6;--muted:#a9c6b6;--border:#28543e;--danger:#ff7777}
+    *{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at top,#123d2b 0,#07130f 50%);color:var(--text);font-family:Tahoma,Arial,sans-serif;min-height:100vh}
+    a{color:var(--green);text-decoration:none}a:hover{text-decoration:underline}
+    .wrap{width:min(960px,94%);margin:0 auto;padding:20px 0 32px}
+    header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px 0 22px}
+    .brand{font-size:25px;font-weight:900;color:#fff}.brand span{color:var(--green)}
+    nav{display:flex;gap:12px;flex-wrap:wrap;font-size:14px}
+    .panel{background:linear-gradient(145deg,rgba(22,53,40,.97),rgba(10,29,21,.97));border:1px solid var(--border);border-radius:20px;padding:22px;margin:14px 0;box-shadow:0 12px 35px #0003}
+    h1,h2,h3{margin-top:0}p{line-height:1.9;color:var(--muted)}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px}
+    .btn,button{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--green);color:#062015;border:0;border-radius:12px;padding:13px 17px;font-weight:800;font-size:15px;cursor:pointer;font-family:inherit}
+    .btn:hover,button:hover{background:#65efa8;text-decoration:none}.btn.secondary,button.secondary{background:var(--panel2);border:1px solid var(--border);color:var(--text)}
+    input,select,textarea{width:100%;background:#071a12;border:1px solid var(--border);border-radius:11px;padding:13px;color:var(--text);font:inherit;margin:7px 0 14px}
+    label{display:block;color:var(--muted);font-size:14px;margin-top:8px}
+    .muted{color:var(--muted)}.error{color:var(--danger)}.success{color:var(--green)}
+    .stats{display:flex;gap:10px;flex-wrap:wrap}.stat{flex:1;min-width:135px;background:#091b13;border:1px solid var(--border);border-radius:13px;padding:13px;text-align:center}.stat strong{display:block;font-size:22px;color:var(--green);margin-bottom:5px}
+    .code{font-size:26px;font-weight:900;letter-spacing:5px;color:var(--green);direction:ltr;display:inline-block}
+    .row{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;border-bottom:1px solid var(--border);padding:13px 0}
+    footer{border-top:1px solid var(--border);padding-top:20px;margin-top:30px;color:var(--muted);font-size:13px;line-height:2}
+    .pill{display:inline-block;background:#0a2117;border:1px solid var(--border);border-radius:99px;padding:6px 10px;font-size:12px;color:var(--muted)}
+    @media(max-width:540px){.panel{padding:17px}.brand{font-size:22px}.btn,button{width:100%}.row .btn,.row button{width:auto}}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <a class="brand" href="/">ایفوتبال <span>یار</span></a>
+    <nav>
+      <a href="/">خانه</a><a href="/opponent">پیدا کردن حریف</a><a href="/cups">کاپ‌ها</a><a href="/admin/login">مدیریت</a>
+    </nav>
+  </header>
+
+  <div class="stats" aria-label="آمار سایت">
+    <div class="stat"><strong id="online-count">{{ online_count }}</strong>کاربر آنلاین</div>
+    <div class="stat"><strong>{{ total_visits }}</strong>بازدید ثبت‌شده</div>
+  </div>
+
+  {% block content %}{% endblock %}
+
+  <footer>
+    <div><strong>ارتباط با مدیریت ایفوتبال یار</strong></div>
+    <div>کانال روبیکا: <a href="{{ rubika_channel_url }}" target="_blank" rel="noopener">efcup27</a></div>
+    <div>آیدی مدیریت روبیکا: <a href="{{ rubika_admin_url }}" target="_blank" rel="noopener">Mamadb87</a></div>
+    <div>آیدی مدیریت تلگرام: <a href="{{ telegram_admin_url }}" target="_blank" rel="noopener">Mamad13287</a></div>
+    <div>© ایفوتبال یار</div>
+  </footer>
+</div>
+<script>
+  async function updateOnlineCount(){
+    try{
+      const response = await fetch("/api/heartbeat", {method:"POST", headers:{"Content-Type":"application/json"}, body:"{}"});
+      if(response.ok){
+        const data = await response.json();
+        const el = document.getElementById("online-count");
+        if(el) el.textContent = data.online;
+      }
+    }catch(e){}
+  }
+  setInterval(updateOnlineCount, 30000);
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>
