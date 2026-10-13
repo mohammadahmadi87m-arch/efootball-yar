@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}کدهای آماده بازی | ایفوتبال یار{% endblock %}
+{% block content %}
+<section class="panel">
+  <h1>📋 کدهای آماده بازی</h1>
+  <p>کدهای جدیدتر بالاتر نمایش داده می‌شوند. برای کپی کردن، روی دکمه کنار کد بزن.</p>
+  <div id="code-list">
+    {% if codes %}
+      {% for item in codes %}
+        <div class="row" data-code-id="{{ item.id }}">
+          <span class="code">{{ item.code }}</span>
+          <button type="button" class="copy-btn" data-code="{{ item.code }}">کپی کد</button>
+        </div>
+      {% endfor %}
+    {% else %}
+      <p id="empty-message">فعلاً کدی ثبت نشده است.</p>
+    {% endif %}
+  </div>
+  <p id="copy-message" class="success" aria-live="polite"></p>
+  <a class="btn secondary" href="/opponent">بازگشت</a>
+</section>
+<script>
+  document.querySelectorAll(".copy-btn").forEach(button => {
+    button.addEventListener("click", async () => {
+      const code = button.dataset.code;
+      try {
+        await navigator.clipboard.writeText(code);
+        document.getElementById("copy-message").textContent = "کد کپی شد: " + code;
+      } catch (e) {
+        const field = document.createElement("textarea");
+        field.value = code;
+        document.body.appendChild(field);
+        field.select();
+        const ok = document.execCommand("copy");
+        field.remove();
+        document.getElementById("copy-message").textContent = ok ? "کد کپی شد: " + code : "کد را دستی کپی کن: " + code;
+      }
+    });
+  });
+</script>
+{% if owned_code_id and owned_code_token %}
+<script>
+  (() => {
+    const codeId = {{ owned_code_id|tojson }};
+    const ownerToken = {{ owned_code_token|tojson }};
+    let sent = false;
+    function cleanup(){
+      if(sent) return;
+      sent = true;
+      const payload = JSON.stringify({code_id: codeId, owner_token: ownerToken});
+      try {
+        navigator.sendBeacon("/api/codes/leave", new Blob([payload], {type:"application/json"}));
+      } catch(e) {
+        fetch("/api/codes/leave", {
+          method:"POST", headers:{"Content-Type":"application/json"},
+          body:payload, keepalive:true
+        }).catch(()=>{});
+      }
+    }
+    window.addEventListener("pagehide", cleanup);
+  })();
+</script>
+{% endif %}
+{% endblock %}
