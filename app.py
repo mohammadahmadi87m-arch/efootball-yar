@@ -48,6 +48,19 @@ class Match(db.Model):
     status = db.Column(db.String(30), default="pending")
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     judge = db.relationship("Judge")
+    player1_queue_id = db.Column(
+    db.Integer,
+    db.ForeignKey("queue_entry.id"),
+    nullable=True,
+    index=True
+)
+
+player2_queue_id = db.Column(
+    db.Integer,
+    db.ForeignKey("queue_entry.id"),
+    nullable=True,
+    index=True
+)
 
 class Cup(db.Model):
     id = db.Column(db.Integer, primary_key=True)
