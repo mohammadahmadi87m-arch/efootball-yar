@@ -1,40 +1,38 @@
 import os
 import secrets
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from flask import (
-    Flask, render_template, request, redirect,
-    url_for, session, jsonify, abort
+    Flask, render_template, request, redirect, url_for,
+    session, jsonify, abort
 )
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import or_
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import inspect, text, func
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", secrets.token_hex(32))
 
-database_url = os.environ.get(
-    "DATABASE_URL",
-    "sqlite:///efootball_yar.db"
-)
-
+database_url = os.environ.get("DATABASE_URL", "sqlite:///efootball_yar.db")
 if database_url.startswith("postgres://"):
-    database_url = database_url.replace(
-        "postgres://", "postgresql://", 1
-    )
+    database_url = database_url.replace("postgres://", "postgresql://", 1)
 
 app.config["SQLALCHEMY_DATABASE_URI"] = database_url
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
-    "pool_pre_ping": True
-}
+app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {"pool_pre_ping": True}
 
 db = SQLAlchemy(app)
 
+ONLINE_SECONDS = 90
+CODE_LENGTH = 8
+
+RUBIKA_CHANNEL_URL = "https://rubika.ir/efcup27"
+RUBIKA_ADMIN_URL = "https://rubika.ir/Mamadb87"
+TELEGRAM_ADMIN_URL = "https://t.me/Mamad13287"
+
 
 # -------------------------
-# Models
+# Database models
 # -------------------------
 
 class Admin(db.Model):
@@ -47,57 +45,35 @@ class Judge(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(120), nullable=False)
     rubika_id = db.Column(db.String(120), nullable=False)
-    active = db.Column(db.Boolean, default=True)
+    active = db.Column(db.Boolean, default=True, nullable=False)
 
 
 class QueueEntry(db.Model):
+    # Kept for compatibility with existing databases and old records.
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(120), nullable=False)
-    rubika_id = db.Column(db.String(120), nullable=False)
-    mode = db.Column(db.String(30), nullable=False)
+    name = db.Column(db.String(120), nullable=False, default="")
+    rubika_id = db.Column(db.String(120), nullable=False, default="")
+    mode = db.Column(db.String(30), nullable=False, default="friendly")
     prize_level = db.Column(db.String(30), nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 
 class Match(db.Model):
+    # Kept for compatibility with existing databases and old records.
     id = db.Column(db.Integer, primary_key=True)
-
-    player1_name = db.Column(db.String(120), nullable=False)
-    player1_rubika = db.Column(db.String(120), nullable=False)
-
-    player2_name = db.Column(db.String(120), nullable=False)
-    player2_rubika = db.Column(db.String(120), nullable=False)
-
-    mode = db.Column(db.String(30), nullable=False)
+    player1_name = db.Column(db.String(120), nullable=False, default="")
+    player1_rubika = db.Column(db.String(120), nullable=False, default="")
+    player2_name = db.Column(db.String(120), nullable=False, default="")
+    player2_rubika = db.Column(db.String(120), nullable=False, default="")
+    mode = db.Column(db.String(30), nullable=False, default="friendly")
     prize_level = db.Column(db.String(30), nullable=True)
-
-    judge_id = db.Column(
-        db.Integer,
-        db.ForeignKey("judge.id"),
-        nullable=True
-    )
-
-    # شناسه اختصاصی هر بازیکن در صف
-    player1_queue_id = db.Column(
-        db.Integer,
-        db.ForeignKey("queue_entry.id"),
-        nullable=True,
-        index=True
-    )
-
-    player2_queue_id = db.Column(
-        db.Integer,
-        db.ForeignKey("queue_entry.id"),
-        nullable=True,
-        index=True
-    )
-
+    judge_id = db.Column(db.Integer, db.ForeignKey("judge.id"), nullable=True)
+    player1_queue_id = db.Column(db.Integer, db.ForeignKey("queue_entry.id"), nullable=True, index=True)
+    player2_queue_id = db.Column(db.Integer, db.ForeignKey("queue_entry.id"), nullable=True, index=True)
     player1_confirmed = db.Column(db.Boolean, default=False)
     player2_confirmed = db.Column(db.Boolean, default=False)
-
     status = db.Column(db.String(30), default="pending")
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
     judge = db.relationship("Judge")
 
 
@@ -106,84 +82,165 @@ class Cup(db.Model):
     name = db.Column(db.String(160), nullable=False)
     teams_count = db.Column(db.Integer, nullable=False)
     format_type = db.Column(db.String(160), nullable=False)
-    prize = db.Column(db.String(300), nullable=False)
-    entry_fee = db.Column(db.String(100), nullable=False)
-    organizer_rubika = db.Column(db.String(120), nullable=False)
-    channel_rubika = db.Column(db.String(120), nullable=False)
+    prize = db.Column(db.String(300), nullable=False, default="")
+    entry_fee = db.Column(db.String(100), nullable=False, default="")
+    # Existing column names are retained for database compatibility.
+    organizer_rubika = db.Column(db.String(200), nullable=False, default="")
+    channel_rubika = db.Column(db.String(500), nullable=False, default="")
     status = db.Column(db.String(30), default="open")
+    contact_platform = db.Column(db.String(20), nullable=False, default="rubika")
+
+
+class FriendlyCode(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    code = db.Column(db.String(8), nullable=False, index=True)
+    owner_token = db.Column(db.String(64), nullable=False, index=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
+
+
+class SiteStats(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    total_visits = db.Column(db.Integer, nullable=False, default=0)
+
+
+class OnlineSession(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    session_key = db.Column(db.String(64), unique=True, nullable=False, index=True)
+    last_seen = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
 
 
 # -------------------------
-# Helpers
+# Database compatibility migration
 # -------------------------
 
-def admin_required():
-    if not session.get("admin_id"):
-        abort(403)
+def ensure_column(table_name, column_name, column_sql):
+    inspector = inspect(db.engine)
+    if table_name not in inspector.get_table_names():
+        return
+    existing = {column["name"] for column in inspector.get_columns(table_name)}
+    if column_name not in existing:
+        with db.engine.begin() as connection:
+            connection.execute(text(
+                f'ALTER TABLE "{table_name}" ADD COLUMN "{column_name}" {column_sql}'
+            ))
 
 
-def get_active_match_for_queue(queue_id):
-    """مسابقه‌ای را پیدا می‌کند که به شناسه صف بازیکن متصل است."""
-    return Match.query.filter(
-        Match.status.in_(["pending", "confirmed"]),
-        or_(
-            Match.player1_queue_id == queue_id,
-            Match.player2_queue_id == queue_id
-        )
-    ).order_by(Match.id.desc()).first()
+def initialize_database():
+    db.create_all()
+
+    # Add fields to existing Cup table without deleting its data.
+    ensure_column("cup", "contact_platform", "VARCHAR(20) NOT NULL DEFAULT 'rubika'")
+
+    # Older versions of Match may not have these fields.
+    ensure_column("match", "player1_queue_id", "INTEGER")
+    ensure_column("match", "player2_queue_id", "INTEGER")
+
+    # Ensure a stats row exists.
+    if not SiteStats.query.first():
+        db.session.add(SiteStats(total_visits=0))
+        db.session.commit()
+
+    # Expire stale online sessions and temporary codes.
+    cutoff = datetime.utcnow() - timedelta(seconds=ONLINE_SECONDS)
+    OnlineSession.query.filter(OnlineSession.last_seen < cutoff).delete(synchronize_session=False)
+    db.session.commit()
 
 
-def set_match_session(match, queue_id):
-    """شناسه مسابقه و جایگاه بازیکن را در نشست ذخیره می‌کند."""
-    session.pop("queue_id", None)
+def create_admin_from_env():
+    if Admin.query.first():
+        return
+    username = os.environ.get("ADMIN_USERNAME")
+    password = os.environ.get("ADMIN_PASSWORD")
+    if not username or not password:
+        app.logger.warning("Admin was not created: set ADMIN_USERNAME and ADMIN_PASSWORD.")
+        return
+    db.session.add(Admin(
+        username=username,
+        password_hash=generate_password_hash(password)
+    ))
+    db.session.commit()
 
-    session["match_id"] = match.id
 
-    if match.player1_queue_id == queue_id:
-        session["player_slot"] = 1
-    elif match.player2_queue_id == queue_id:
-        session["player_slot"] = 2
+# -------------------------
+# Request tracking / counters
+# -------------------------
+
+@app.before_request
+def track_visitor():
+    if request.endpoint == "static":
+        return
+
+    visitor_token = session.get("visitor_token")
+    if not visitor_token:
+        visitor_token = secrets.token_hex(24)
+        session["visitor_token"] = visitor_token
+
+    now = datetime.utcnow()
+    online = OnlineSession.query.filter_by(session_key=visitor_token).first()
+    if online:
+        online.last_seen = now
     else:
-        session["player_slot"] = 1
+        db.session.add(OnlineSession(session_key=visitor_token, last_seen=now))
+
+    # Count normal page visits, not API heartbeats or other API calls.
+    if request.method == "GET" and not (
+        request.path.startswith("/api/") or request.path == "/health"
+    ):
+        stats = SiteStats.query.first()
+        if not stats:
+            stats = SiteStats(total_visits=0)
+            db.session.add(stats)
+        stats.total_visits += 1
+
+    cutoff = now - timedelta(seconds=ONLINE_SECONDS)
+    OnlineSession.query.filter(OnlineSession.last_seen < cutoff).delete(synchronize_session=False)
+    db.session.commit()
 
 
-def create_match_for_entries(entry1, entry2):
-    """دو بازیکن را به یک مسابقه متصل می‌کند."""
-    judge = None
+@app.route("/api/heartbeat", methods=["POST"])
+def heartbeat():
+    token = session.get("visitor_token")
+    if not token:
+        token = secrets.token_hex(24)
+        session["visitor_token"] = token
 
-    if entry1.mode == "prize":
-        judge = (
-            Judge.query
-            .filter_by(active=True)
-            .order_by(Judge.id.asc())
-            .first()
-        )
+    now = datetime.utcnow()
+    online = OnlineSession.query.filter_by(session_key=token).first()
+    if online:
+        online.last_seen = now
+    else:
+        db.session.add(OnlineSession(session_key=token, last_seen=now))
 
-    match = Match(
-        player1_name=entry1.name,
-        player1_rubika=entry1.rubika_id,
-        player2_name=entry2.name,
-        player2_rubika=entry2.rubika_id,
-        mode=entry1.mode,
-        prize_level=entry1.prize_level,
-        judge_id=judge.id if judge else None,
-        player1_queue_id=entry1.id,
-        player2_queue_id=entry2.id,
-        status="pending"
-    )
+    cutoff = now - timedelta(seconds=ONLINE_SECONDS)
+    OnlineSession.query.filter(OnlineSession.last_seen < cutoff).delete(synchronize_session=False)
+    db.session.commit()
 
-    db.session.add(match)
+    count = OnlineSession.query.filter(OnlineSession.last_seen >= cutoff).count()
+    return jsonify({"online": count})
 
-    # رکوردهای صف حذف نمی‌شوند تا شناسه‌ها برای پیگیری
-    # مسابقه باقی بمانند. رکوردها پس از پایان مسابقه
-    # می‌توانند با یک فرایند پاک‌سازی حذف شوند.
-    db.session.flush()
 
-    return match
+@app.context_processor
+def inject_site_stats():
+    try:
+        stats = SiteStats.query.first()
+        total_visits = stats.total_visits if stats else 0
+        cutoff = datetime.utcnow() - timedelta(seconds=ONLINE_SECONDS)
+        online_count = OnlineSession.query.filter(OnlineSession.last_seen >= cutoff).count()
+    except Exception:
+        total_visits = 0
+        online_count = 0
+
+    return {
+        "total_visits": total_visits,
+        "online_count": online_count,
+        "rubika_channel_url": RUBIKA_CHANNEL_URL,
+        "rubika_admin_url": RUBIKA_ADMIN_URL,
+        "telegram_admin_url": TELEGRAM_ADMIN_URL
+    }
 
 
 # -------------------------
-# Main pages
+# Public pages
 # -------------------------
 
 @app.route("/")
@@ -196,326 +253,108 @@ def opponent():
     return render_template("opponent.html")
 
 
-# -------------------------
-# Queue and matching
-# -------------------------
+@app.route("/opponent/code/register", methods=["GET", "POST"])
+def register_code():
+    if request.method == "POST":
+        code = "".join(ch for ch in request.form.get("code", "") if ch.isdigit())
 
-@app.route("/queue", methods=["POST"])
-def queue():
-    name = request.form.get("name", "").strip()
-    rubika_id = request.form.get("rubika_id", "").strip()
-    mode = request.form.get("mode", "").strip()
-    prize_level = request.form.get("prize_level", "").strip() or None
+        if len(code) != CODE_LENGTH:
+            return render_template(
+                "register_code.html",
+                error="کد بازی باید دقیقاً ۸ رقم باشد.",
+                code_value=code
+            )
 
-    if not name or not rubika_id:
-        return redirect(url_for("opponent"))
+        # A visitor can have only one active code at a time.
+        old_id = session.get("owned_code_id")
+        old_token = session.get("owned_code_token")
+        if old_id and old_token:
+            old_code = FriendlyCode.query.filter_by(
+                id=old_id, owner_token=old_token
+            ).first()
+            if old_code:
+                db.session.delete(old_code)
+                db.session.commit()
 
-    if mode not in {"friendly", "prize"}:
-        return redirect(url_for("opponent"))
+        owner_token = secrets.token_hex(24)
+        new_code = FriendlyCode(code=code, owner_token=owner_token)
+        db.session.add(new_code)
+        db.session.commit()
 
-    if mode == "friendly":
-        prize_level = None
+        session["owned_code_id"] = new_code.id
+        session["owned_code_token"] = owner_token
 
-    if mode == "prize" and prize_level not in {
-        "light", "ideal", "heavy"
-    }:
-        return redirect(url_for("opponent"))
-
-    # اگر همین نشست از قبل در مسابقه است، همان مسابقه را باز کن.
-    existing_match_id = session.get("match_id")
-
-    if existing_match_id:
-        existing_match = db.session.get(Match, existing_match_id)
-
-        if existing_match and existing_match.status in {
-            "pending", "confirmed"
-        }:
-            return redirect(url_for("match_view"))
-
-        session.pop("match_id", None)
-        session.pop("player_slot", None)
-
-    # اگر همین نشست در صف است، دوباره رکورد نساز.
-    existing_queue_id = session.get("queue_id")
-
-    if existing_queue_id:
-        existing_entry = db.session.get(
-            QueueEntry, existing_queue_id
+        return render_template(
+            "register_code.html",
+            success="کد بازی با موفقیت ثبت شد.",
+            registered_code=code,
+            code_id=new_code.id,
+            owner_token=owner_token
         )
 
-        if existing_entry:
-            return redirect(url_for("waiting"))
-
-        session.pop("queue_id", None)
-
-    try:
-        # تراکنش کوتاه برای یافتن حریف و ایجاد مسابقه
-        with db.session.begin_nested():
-            candidate = (
-                QueueEntry.query
-                .filter_by(mode=mode, prize_level=prize_level)
-                .order_by(
-                    QueueEntry.created_at.asc(),
-                    QueueEntry.id.asc()
-                )
-                .with_for_update()
-                .first()
-            )
-
-            entry = QueueEntry(
-                name=name,
-                rubika_id=rubika_id,
-                mode=mode,
-                prize_level=prize_level
-            )
-
-            db.session.add(entry)
-            db.session.flush()
-
-            if candidate:
-                # حریف باید یک رکورد صف متفاوت باشد.
-                if candidate.id != entry.id:
-                    match = create_match_for_entries(
-                        candidate, entry
-                    )
-
-                    # فقط رکورد حریف از صف حذف می‌شود.
-                    # شناسه او در Match ذخیره شده است.
-                    db.session.delete(candidate)
-                else:
-                    match = None
-            else:
-                match = None
-
-        db.session.commit()
-
-    except Exception:
-        db.session.rollback()
-        app.logger.exception("Queue matching failed")
-        return "خطا در ثبت جست‌وجوی حریف. دوباره تلاش کن.", 500
-
-    if match:
-        session.pop("queue_id", None)
-        session["match_id"] = match.id
-        session["player_slot"] = 2
-
-        return redirect(url_for("match_view"))
-
-    session["queue_id"] = entry.id
-    session["queue_name"] = name
-    session["queue_rubika"] = rubika_id
-    session["queue_mode"] = mode
-    session["queue_prize_level"] = prize_level
-
-    session.pop("match_id", None)
-    session.pop("player_slot", None)
-
-    return redirect(url_for("waiting"))
+    return render_template("register_code.html")
 
 
-@app.route("/waiting")
-def waiting():
-    if not session.get("queue_id"):
-        if session.get("match_id"):
-            return redirect(url_for("match_view"))
-
-        return redirect(url_for("opponent"))
-
-    return render_template("queue.html")
-
-
-@app.route("/api/queue-status")
-def queue_status():
-    queue_id = session.get("queue_id")
-
-    if not queue_id:
-        match_id = session.get("match_id")
-
-        if match_id:
-            return jsonify({
-                "matched": True,
-                "redirect": url_for("match_view")
-            })
-
-        return jsonify({"matched": False})
-
-    entry = db.session.get(QueueEntry, queue_id)
-
-    # اگر رکورد صف حذف شده باشد، شناسه صف را در Match بررسی کن.
-    match = get_active_match_for_queue(queue_id)
-
-    if match:
-        set_match_session(match, queue_id)
-
-        return jsonify({
-            "matched": True,
-            "redirect": url_for("match_view")
-        })
-
-    if not entry:
-        session.pop("queue_id", None)
-
-        return jsonify({
-            "matched": False,
-            "error": "queue_entry_not_found"
-        })
-
-    try:
-        with db.session.begin_nested():
-            # اگر بازیکن دیگری هم‌سطح منتظر است، مسابقه بساز.
-            candidate = (
-                QueueEntry.query
-                .filter(
-                    QueueEntry.mode == entry.mode,
-                    QueueEntry.prize_level == entry.prize_level,
-                    QueueEntry.id != entry.id
-                )
-                .order_by(
-                    QueueEntry.created_at.asc(),
-                    QueueEntry.id.asc()
-                )
-                .with_for_update()
-                .first()
-            )
-
-            if candidate:
-                match = create_match_for_entries(entry, candidate)
-                db.session.delete(candidate)
-                db.session.delete(entry)
-            else:
-                match = None
-
-        db.session.commit()
-
-    except Exception:
-        db.session.rollback()
-        app.logger.exception("Queue status matching failed")
-
-        return jsonify({
-            "matched": False,
-            "error": "matching_error"
-        }), 500
-
-    if match:
-        set_match_session(match, queue_id)
-
-        return jsonify({
-            "matched": True,
-            "redirect": url_for("match_view")
-        })
-
-    return jsonify({"matched": False})
-
-
-@app.route("/cancel-queue", methods=["POST"])
-def cancel_queue():
-    queue_id = session.pop("queue_id", None)
-
-    if queue_id:
-        entry = db.session.get(QueueEntry, queue_id)
-
-        if entry:
-            db.session.delete(entry)
-            db.session.commit()
-
-    session.pop("queue_name", None)
-    session.pop("queue_rubika", None)
-    session.pop("queue_mode", None)
-    session.pop("queue_prize_level", None)
-
-    return redirect(url_for("index"))
-
-
-# -------------------------
-# Match pages and confirmation
-# -------------------------
-
-@app.route("/match")
-def match_view():
-    match_id = session.get("match_id")
-
-    match = db.session.get(Match, match_id) if match_id else None
-
-    if not match:
-        session.pop("match_id", None)
-        session.pop("player_slot", None)
-        return redirect(url_for("opponent"))
-
-    if match.status == "rejected":
-        session.pop("match_id", None)
-        session.pop("player_slot", None)
-        return redirect(url_for("opponent"))
-
-    slot = session.get("player_slot", 1)
+@app.route("/opponent/codes")
+def ready_codes():
+    codes = FriendlyCode.query.order_by(
+        FriendlyCode.created_at.desc(),
+        FriendlyCode.id.desc()
+    ).all()
 
     return render_template(
-        "match.html",
-        match=match,
-        slot=slot
+        "ready_codes.html",
+        codes=codes,
+        owned_code_id=session.get("owned_code_id"),
+        owned_code_token=session.get("owned_code_token")
     )
 
 
-@app.route("/api/match/<int:match_id>")
-def match_status(match_id):
-    match = db.session.get(Match, match_id)
+@app.route("/api/codes/leave", methods=["POST"])
+def delete_owned_code_on_leave():
+    # This endpoint is called by pagehide/sendBeacon from the code page.
+    payload = request.get_json(silent=True) or request.form
+    try:
+        code_id = int(payload.get("code_id", 0))
+    except (TypeError, ValueError):
+        return jsonify({"deleted": False}), 400
 
-    if not match or session.get("match_id") != match_id:
-        return jsonify({"error": "not_found"}), 404
+    owner_token = str(payload.get("owner_token", ""))
+    if not code_id or not owner_token:
+        return jsonify({"deleted": False}), 400
 
-    return jsonify({
-        "status": match.status,
-        "player1_confirmed": match.player1_confirmed,
-        "player2_confirmed": match.player2_confirmed
-    })
+    code_entry = FriendlyCode.query.filter_by(
+        id=code_id,
+        owner_token=owner_token
+    ).first()
 
+    if code_entry:
+        db.session.delete(code_entry)
+        db.session.commit()
 
-@app.route("/match/<int:match_id>/confirm", methods=["POST"])
-def confirm(match_id):
-    match = db.session.get(Match, match_id)
+    if session.get("owned_code_id") == code_id:
+        session.pop("owned_code_id", None)
+        session.pop("owned_code_token", None)
 
-    if not match or session.get("match_id") != match_id:
-        abort(404)
-
-    if match.status != "pending":
-        return jsonify({
-            "confirmed": match.status == "confirmed",
-            "both": match.status == "confirmed"
-        })
-
-    slot = session.get("player_slot")
-
-    if slot == 1:
-        match.player1_confirmed = True
-    elif slot == 2:
-        match.player2_confirmed = True
-    else:
-        abort(403)
-
-    if match.player1_confirmed and match.player2_confirmed:
-        match.status = "confirmed"
-
-    db.session.commit()
-
-    return jsonify({
-        "confirmed": True,
-        "both": match.status == "confirmed"
-    })
+    return jsonify({"deleted": True})
 
 
-@app.route("/match/<int:match_id>/reject", methods=["POST"])
-def reject(match_id):
-    match = db.session.get(Match, match_id)
+@app.route("/api/codes")
+def codes_api():
+    codes = FriendlyCode.query.order_by(
+        FriendlyCode.created_at.desc(),
+        FriendlyCode.id.desc()
+    ).all()
 
-    if not match or session.get("match_id") != match_id:
-        abort(404)
+    return jsonify([
+        {"id": item.id, "code": item.code}
+        for item in codes
+    ])
 
-    match.status = "rejected"
-    db.session.commit()
 
-    session.pop("match_id", None)
-    session.pop("player_slot", None)
-
-    return redirect(url_for("index"))
+@app.route("/health")
+def health():
+    return jsonify({"status": "ok"})
 
 
 # -------------------------
@@ -524,36 +363,32 @@ def reject(match_id):
 
 @app.route("/cups")
 def cups():
-    return render_template(
-        "cups.html",
-        cups=Cup.query.order_by(Cup.id.desc()).all()
-    )
+    all_cups = Cup.query.order_by(Cup.id.desc()).all()
+    return render_template("cups.html", cups=all_cups)
 
 
 # -------------------------
-# Admin login
+# Admin
 # -------------------------
+
+def admin_required():
+    if not session.get("admin_id"):
+        return redirect(url_for("admin_login"))
+    return None
+
 
 @app.route("/admin/login", methods=["GET", "POST"])
 def admin_login():
     if request.method == "POST":
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "")
-
         admin = Admin.query.filter_by(username=username).first()
 
-        if admin and check_password_hash(
-            admin.password_hash, password
-        ):
-            session.clear()
+        if admin and check_password_hash(admin.password_hash, password):
             session["admin_id"] = admin.id
-
             return redirect(url_for("admin_dashboard"))
 
-        return render_template(
-            "admin/login.html",
-            error="نام کاربری یا رمز عبور اشتباه است."
-        )
+        return render_template("admin/login.html", error="نام کاربری یا رمز عبور اشتباه است.")
 
     return render_template("admin/login.html")
 
@@ -561,56 +396,67 @@ def admin_login():
 @app.route("/admin/logout")
 def admin_logout():
     session.pop("admin_id", None)
-
     return redirect(url_for("index"))
 
 
 @app.route("/admin")
 def admin_dashboard():
-    admin_required()
+    if not session.get("admin_id"):
+        return redirect(url_for("admin_login"))
 
     return render_template(
         "admin/dashboard.html",
         cups=Cup.query.order_by(Cup.id.desc()).all(),
         judges=Judge.query.order_by(Judge.id.desc()).all(),
-        queue=QueueEntry.query.order_by(
-            QueueEntry.created_at.desc()
-        ).all()
+        queue=QueueEntry.query.order_by(QueueEntry.created_at.desc()).all()
     )
 
 
 @app.route("/admin/cups/add", methods=["POST"])
 def add_cup():
-    admin_required()
+    if not session.get("admin_id"):
+        return redirect(url_for("admin_login"))
 
     try:
-        cup = Cup(
-            name=request.form["name"],
-            teams_count=int(request.form["teams_count"]),
-            format_type=request.form["format_type"],
-            prize=request.form["prize"],
-            entry_fee=request.form["entry_fee"],
-            organizer_rubika=request.form["organizer_rubika"],
-            channel_rubika=request.form["channel_rubika"],
-            status=request.form.get("status", "open")
+        platform = request.form.get("contact_platform", "rubika").strip().lower()
+        if platform not in {"rubika", "telegram"}:
+            platform = "rubika"
+
+        organizer = (
+            request.form.get("organizer_contact", "").strip()
+            or request.form.get("organizer_rubika", "").strip()
+        )
+        channel = (
+            request.form.get("channel_link", "").strip()
+            or request.form.get("channel_rubika", "").strip()
         )
 
+        cup = Cup(
+            name=request.form["name"].strip(),
+            teams_count=int(request.form["teams_count"]),
+            format_type=request.form["format_type"].strip(),
+            prize=request.form.get("prize", "").strip(),
+            entry_fee=request.form.get("entry_fee", "").strip(),
+            organizer_rubika=organizer,
+            channel_rubika=channel,
+            contact_platform=platform,
+            status=request.form.get("status", "open").strip()
+        )
         db.session.add(cup)
         db.session.commit()
-
     except (ValueError, KeyError):
         db.session.rollback()
-        return "اطلاعات کاپ نامعتبر است.", 400
+        return "اطلاعات کاپ نامعتبر است؛ فیلدها را بررسی کن.", 400
 
     return redirect(url_for("admin_dashboard"))
 
 
 @app.route("/admin/cups/<int:cup_id>/delete", methods=["POST"])
 def delete_cup(cup_id):
-    admin_required()
+    if not session.get("admin_id"):
+        return redirect(url_for("admin_login"))
 
     cup = db.session.get(Cup, cup_id)
-
     if cup:
         db.session.delete(cup)
         db.session.commit()
@@ -620,32 +466,24 @@ def delete_cup(cup_id):
 
 @app.route("/admin/judges/add", methods=["POST"])
 def add_judge():
-    admin_required()
+    if not session.get("admin_id"):
+        return redirect(url_for("admin_login"))
 
     name = request.form.get("name", "").strip()
     rubika_id = request.form.get("rubika_id", "").strip()
-
-    if not name or not rubika_id:
-        return redirect(url_for("admin_dashboard"))
-
-    judge = Judge(
-        name=name,
-        rubika_id=rubika_id,
-        active=True
-    )
-
-    db.session.add(judge)
-    db.session.commit()
+    if name and rubika_id:
+        db.session.add(Judge(name=name, rubika_id=rubika_id, active=True))
+        db.session.commit()
 
     return redirect(url_for("admin_dashboard"))
 
 
 @app.route("/admin/judges/<int:judge_id>/toggle", methods=["POST"])
 def toggle_judge(judge_id):
-    admin_required()
+    if not session.get("admin_id"):
+        return redirect(url_for("admin_login"))
 
     judge = db.session.get(Judge, judge_id)
-
     if judge:
         judge.active = not judge.active
         db.session.commit()
@@ -653,41 +491,10 @@ def toggle_judge(judge_id):
     return redirect(url_for("admin_dashboard"))
 
 
-# -------------------------
-# Admin initialization
-# -------------------------
-
-def create_admin_from_env():
-    if Admin.query.first():
-        return
-
-    username = os.environ.get("ADMIN_USERNAME")
-    password = os.environ.get("ADMIN_PASSWORD")
-
-    if not username or not password:
-        app.logger.warning(
-            "Admin was not created: set ADMIN_USERNAME and ADMIN_PASSWORD."
-        )
-        return
-
-    db.session.add(
-        Admin(
-            username=username,
-            password_hash=generate_password_hash(password)
-        )
-    )
-
-    db.session.commit()
-
-
 with app.app_context():
-    db.create_all()
+    initialize_database()
     create_admin_from_env()
 
 
 if __name__ == "__main__":
-    app.run(
-        host="0.0.0.0",
-        port=int(os.environ.get("PORT", 10000)),
-        debug=False
-    )        
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)), debug=False)
