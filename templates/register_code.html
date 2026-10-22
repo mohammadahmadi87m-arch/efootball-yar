@@ -1,47 +1,82 @@
 {% extends "base.html" %}
 {% block title %}ثبت کد بازی دوستانه | ایفوتبال یار{% endblock %}
+
 {% block content %}
 <section class="panel">
   <h1>ثبت کد بازی دوستانه</h1>
-  <p>کد بازی باید دقیقاً ۸ رقم باشد. تا وقتی صفحه ثبت کد باز است، کد در فهرست باقی می‌ماند؛ با خروج از صفحه تلاش می‌کنیم آن را خودکار حذف کنیم.</p>
-  {% if error %}<p class="error">{{ error }}</p>{% endif %}
+
+  <p>
+    کد بازی باید دقیقاً ۸ رقم باشد.
+    هر کد تا ۵ دقیقه پس از ثبت در فهرست باقی می‌ماند.
+  </p>
+
+  {% if error %}
+    <p class="error">{{ error }}</p>
+  {% endif %}
+
   {% if success %}
     <p class="success">{{ success }}</p>
+
     <div style="text-align:center;padding:16px">
       <span class="code">{{ registered_code }}</span>
+      <p>
+        نوع اینترنت:
+        <strong>{{ registered_internet }}</strong>
+      </p>
     </div>
+
     <div class="grid">
-      <a class="btn" href="/opponent/codes">دیدن کدهای آماده</a>
-      <a class="btn secondary" href="/opponent">بازگشت</a>
+      <a class="btn" href="/opponent/codes">
+        دیدن کدهای آماده
+      </a>
+
+      <a class="btn secondary" href="/opponent">
+        بازگشت
+      </a>
     </div>
-    <script>
-      (() => {
-        const codeId = {{ code_id|tojson }};
-        const ownerToken = {{ owner_token|tojson }};
-        let sent = false;
-        function cleanup(){
-          if(sent) return;
-          sent = true;
-          const payload = JSON.stringify({code_id: codeId, owner_token: ownerToken});
-          try {
-            const blob = new Blob([payload], {type:"application/json"});
-            navigator.sendBeacon("/api/codes/leave", blob);
-          } catch(e) {
-            fetch("/api/codes/leave", {
-              method:"POST",
-              headers:{"Content-Type":"application/json"},
-              body:payload,
-              keepalive:true
-            }).catch(()=>{});
-          }
-        }
-        window.addEventListener("pagehide", cleanup);
-      })();
-    </script>
+
   {% else %}
     <form method="post" autocomplete="off">
       <label for="code">کد ۸ رقمی بازی</label>
-      <input id="code" name="code" inputmode="numeric" pattern="[0-9]{8}" maxlength="8" minlength="8" required placeholder="مثلاً 12345678" value="{{ code_value or '' }}">
+
+      <input
+        id="code"
+        name="code"
+        inputmode="numeric"
+        pattern="[0-9]{8}"
+        maxlength="8"
+        minlength="8"
+        required
+        placeholder="مثلاً 12345678"
+        value="{{ code_value or '' }}"
+      >
+
+      <label for="internet_type">نوع اینترنت</label>
+
+      <select id="internet_type" name="internet_type" required>
+        <option value="">انتخاب نوع اینترنت</option>
+
+        <option value="همراه اول"
+          {% if selected_internet == "همراه اول" %}selected{% endif %}>
+          همراه اول
+        </option>
+
+        <option value="ایرانسل"
+          {% if selected_internet == "ایرانسل" %}selected{% endif %}>
+          ایرانسل
+        </option>
+
+        <option value="رایتل"
+          {% if selected_internet == "رایتل" %}selected{% endif %}>
+          رایتل
+        </option>
+
+        <option value="وای‌فای"
+          {% if selected_internet == "وای‌فای" %}selected{% endif %}>
+          وای‌فای
+        </option>
+      </select>
+
       <button type="submit">ثبت کد</button>
     </form>
   {% endif %}
