@@ -4,10 +4,10 @@ from datetime import datetime, timedelta
 
 from flask import (
     Flask, render_template, request, redirect, url_for,
-    session, jsonify, abort
+    session, jsonify
 )
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import inspect, text, func
+from sqlalchemy import inspect, text
 from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
@@ -25,6 +25,8 @@ db = SQLAlchemy(app)
 
 ONLINE_SECONDS = 90
 CODE_LENGTH = 8
+CODE_LIFETIME_MINUTES = 5
+ALLOWED_INTERNET_TYPES = {"همراه اول", "ایرانسل", "رایتل", "وای‌فای"}
 
 RUBIKA_CHANNEL_URL = "https://rubika.ir/efcup27"
 RUBIKA_ADMIN_URL = "https://rubika.ir/Mamadb87"
@@ -84,7 +86,7 @@ class Cup(db.Model):
     format_type = db.Column(db.String(160), nullable=False)
     prize = db.Column(db.String(300), nullable=False, default="")
     entry_fee = db.Column(db.String(100), nullable=False, default="")
-    # Existing column names are retained for database compatibility.
+    # Existing column names retained for compatibility.
     organizer_rubika = db.Column(db.String(200), nullable=False, default="")
     channel_rubika = db.Column(db.String(500), nullable=False, default="")
     status = db.Column(db.String(30), default="open")
@@ -96,6 +98,8 @@ class FriendlyCode(db.Model):
     code = db.Column(db.String(8), nullable=False, index=True)
     owner_token = db.Column(db.String(64), nullable=False, index=True)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, index=True)
+    # Internet type added without replacing existing records.
+    internet_type = db.Column(db.String(30), nullable=False, default="وای‌فای")
 
 
 class SiteStats(db.Model):
@@ -110,7 +114,7 @@ class OnlineSession(db.Model):
 
 
 # -------------------------
-# Database compatibility migration
+# Database compatibility / maintenance
 # -------------------------
 
 def ensure_column(table_name, column_name, column_sql):
@@ -125,35 +129,53 @@ def ensure_column(table_name, column_name, column_sql):
             ))
 
 
+def remove_expired_codes():
+    """Remove only codes whose own five-minute lifetime has elapsed."""
+    cutoff = datetime.utcnow() - timedelta(minutes=CODE_LIFETIME_MINUTES)
+    FriendlyCode.query.filter(
+        FriendlyCode.created_at <= cutoff
+    ).delete(synchronize_session=False)
+    db.session.commit()
+
+
 def initialize_database():
     db.create_all()
 
-    # Add fields to existing Cup table without deleting its data.
+    # Add columns to existing databases without dropping any data.
     ensure_column("cup", "contact_platform", "VARCHAR(20) NOT NULL DEFAULT 'rubika'")
-
-    # Older versions of Match may not have these fields.
     ensure_column("match", "player1_queue_id", "INTEGER")
     ensure_column("match", "player2_queue_id", "INTEGER")
+    ensure_column(
+        "friendly_code",
+        "internet_type",
+        "VARCHAR(30) NOT NULL DEFAULT 'وای‌فای'"
+    )
 
-    # Ensure a stats row exists.
     if not SiteStats.query.first():
         db.session.add(SiteStats(total_visits=0))
         db.session.commit()
 
-    # Expire stale online sessions and temporary codes.
     cutoff = datetime.utcnow() - timedelta(seconds=ONLINE_SECONDS)
-    OnlineSession.query.filter(OnlineSession.last_seen < cutoff).delete(synchronize_session=False)
+    OnlineSession.query.filter(
+        OnlineSession.last_seen < cutoff
+    ).delete(synchronize_session=False)
+    remove_expired_codes()
     db.session.commit()
 
 
 def create_admin_from_env():
+    # Keep an existing admin account unchanged.
     if Admin.query.first():
         return
+
     username = os.environ.get("ADMIN_USERNAME")
     password = os.environ.get("ADMIN_PASSWORD")
     if not username or not password:
-        app.logger.warning("Admin was not created: set ADMIN_USERNAME and ADMIN_PASSWORD.")
+        app.logger.warning(
+            "Admin was not created: set ADMIN_USERNAME and ADMIN_PASSWORD."
+        )
         return
+
     db.session.add(Admin(
         username=username,
         password_hash=generate_password_hash(password)
@@ -170,6 +192,9 @@ def track_visitor():
     if request.endpoint == "static":
         return
 
+    # Expired codes are cleaned during normal site traffic.
+    remove_expired_codes()
+
     visitor_token = session.get("visitor_token")
     if not visitor_token:
         visitor_token = secrets.token_hex(24)
@@ -180,9 +205,12 @@ def track_visitor():
     if online:
         online.last_seen = now
     else:
-        db.session.add(OnlineSession(session_key=visitor_token, last_seen=now))
+        db.session.add(OnlineSession(
+            session_key=visitor_token,
+            last_seen=now
+        ))
 
-    # Count normal page visits, not API heartbeats or other API calls.
+    # Count regular page visits, not API heartbeats or health checks.
     if request.method == "GET" and not (
         request.path.startswith("/api/") or request.path == "/health"
     ):
@@ -193,7 +221,9 @@ def track_visitor():
         stats.total_visits += 1
 
     cutoff = now - timedelta(seconds=ONLINE_SECONDS)
-    OnlineSession.query.filter(OnlineSession.last_seen < cutoff).delete(synchronize_session=False)
+    OnlineSession.query.filter(
+        OnlineSession.last_seen < cutoff
+    ).delete(synchronize_session=False)
     db.session.commit()
 
 
@@ -209,13 +239,20 @@ def heartbeat():
     if online:
         online.last_seen = now
     else:
-        db.session.add(OnlineSession(session_key=token, last_seen=now))
+        db.session.add(OnlineSession(
+            session_key=token,
+            last_seen=now
+        ))
 
     cutoff = now - timedelta(seconds=ONLINE_SECONDS)
-    OnlineSession.query.filter(OnlineSession.last_seen < cutoff).delete(synchronize_session=False)
+    OnlineSession.query.filter(
+        OnlineSession.last_seen < cutoff
+    ).delete(synchronize_session=False)
     db.session.commit()
 
-    count = OnlineSession.query.filter(OnlineSession.last_seen >= cutoff).count()
+    count = OnlineSession.query.filter(
+        OnlineSession.last_seen >= cutoff
+    ).count()
     return jsonify({"online": count})
 
 
@@ -225,7 +262,9 @@ def inject_site_stats():
         stats = SiteStats.query.first()
         total_visits = stats.total_visits if stats else 0
         cutoff = datetime.utcnow() - timedelta(seconds=ONLINE_SECONDS)
-        online_count = OnlineSession.query.filter(OnlineSession.last_seen >= cutoff).count()
+        online_count = OnlineSession.query.filter(
+            OnlineSession.last_seen >= cutoff
+        ).count()
     except Exception:
         total_visits = 0
         online_count = 0
@@ -256,98 +295,95 @@ def opponent():
 @app.route("/opponent/code/register", methods=["GET", "POST"])
 def register_code():
     if request.method == "POST":
-        code = "".join(ch for ch in request.form.get("code", "") if ch.isdigit())
+        code = "".join(
+            ch for ch in request.form.get("code", "")
+            if ch.isdigit()
+        )
+        internet_type = request.form.get("internet_type", "").strip()
 
         if len(code) != CODE_LENGTH:
             return render_template(
                 "register_code.html",
                 error="کد بازی باید دقیقاً ۸ رقم باشد.",
-                code_value=code
+                code_value=code,
+                selected_internet=internet_type
             )
 
-        # A visitor can have only one active code at a time.
-        old_id = session.get("owned_code_id")
-        old_token = session.get("owned_code_token")
-        if old_id and old_token:
-            old_code = FriendlyCode.query.filter_by(
-                id=old_id, owner_token=old_token
-            ).first()
-            if old_code:
-                db.session.delete(old_code)
-                db.session.commit()
+        if internet_type not in ALLOWED_INTERNET_TYPES:
+            return render_template(
+                "register_code.html",
+                error="لطفاً نوع اینترنت را انتخاب کن.",
+                code_value=code,
+                selected_internet=""
+            )
 
+        # Every submission creates a separate record. A new code does not
+        # delete an older code, even if both were submitted by the same visitor.
         owner_token = secrets.token_hex(24)
-        new_code = FriendlyCode(code=code, owner_token=owner_token)
+        new_code = FriendlyCode(
+            code=code,
+            owner_token=owner_token,
+            internet_type=internet_type,
+            created_at=datetime.utcnow()
+        )
         db.session.add(new_code)
         db.session.commit()
 
+        # Keep compatibility with any old templates, but do not use this
+        # session data to delete codes when a visitor leaves a page.
         session["owned_code_id"] = new_code.id
         session["owned_code_token"] = owner_token
 
         return render_template(
             "register_code.html",
-            success="کد بازی با موفقیت ثبت شد.",
+            success="کد بازی با موفقیت ثبت شد و تا ۵ دقیقه در فهرست می‌ماند.",
             registered_code=code,
-            code_id=new_code.id,
-            owner_token=owner_token
+            registered_internet=internet_type
         )
 
-    return render_template("register_code.html")
+    return render_template(
+        "register_code.html",
+        code_value="",
+        selected_internet=""
+    )
 
 
 @app.route("/opponent/codes")
 def ready_codes():
+    remove_expired_codes()
     codes = FriendlyCode.query.order_by(
         FriendlyCode.created_at.desc(),
         FriendlyCode.id.desc()
     ).all()
 
-    return render_template(
-        "ready_codes.html",
-        codes=codes,
-        owned_code_id=session.get("owned_code_id"),
-        owned_code_token=session.get("owned_code_token")
-    )
+    return render_template("ready_codes.html", codes=codes)
 
 
+# Backward-compatible endpoint: page exit does not delete a code.
+# Codes remain available until their own five-minute expiry.
 @app.route("/api/codes/leave", methods=["POST"])
 def delete_owned_code_on_leave():
-    # This endpoint is called by pagehide/sendBeacon from the code page.
-    payload = request.get_json(silent=True) or request.form
-    try:
-        code_id = int(payload.get("code_id", 0))
-    except (TypeError, ValueError):
-        return jsonify({"deleted": False}), 400
-
-    owner_token = str(payload.get("owner_token", ""))
-    if not code_id or not owner_token:
-        return jsonify({"deleted": False}), 400
-
-    code_entry = FriendlyCode.query.filter_by(
-        id=code_id,
-        owner_token=owner_token
-    ).first()
-
-    if code_entry:
-        db.session.delete(code_entry)
-        db.session.commit()
-
-    if session.get("owned_code_id") == code_id:
-        session.pop("owned_code_id", None)
-        session.pop("owned_code_token", None)
-
-    return jsonify({"deleted": True})
+    return jsonify({
+        "deleted": False,
+        "message": "کد تا پایان زمان ۵ دقیقه‌ای خود باقی می‌ماند."
+    })
 
 
 @app.route("/api/codes")
 def codes_api():
+    remove_expired_codes()
     codes = FriendlyCode.query.order_by(
         FriendlyCode.created_at.desc(),
         FriendlyCode.id.desc()
     ).all()
 
     return jsonify([
-        {"id": item.id, "code": item.code}
+        {
+            "id": item.id,
+            "code": item.code,
+            "internet_type": item.internet_type,
+            "created_at": item.created_at.isoformat()
+        }
         for item in codes
     ])
 
@@ -386,9 +422,13 @@ def admin_login():
 
         if admin and check_password_hash(admin.password_hash, password):
             session["admin_id"] = admin.id
+            session.permanent = True
             return redirect(url_for("admin_dashboard"))
 
-        return render_template("admin/login.html", error="نام کاربری یا رمز عبور اشتباه است.")
+        return render_template(
+            "admin/login.html",
+            error="نام کاربری یا رمز عبور اشتباه است."
+        )
 
     return render_template("admin/login.html")
 
@@ -401,6 +441,7 @@ def admin_logout():
 
 @app.route("/admin")
 def admin_dashboard():
+    # Admin pages remain protected even if their links are hidden publicly.
     if not session.get("admin_id"):
         return redirect(url_for("admin_login"))
 
@@ -418,7 +459,9 @@ def add_cup():
         return redirect(url_for("admin_login"))
 
     try:
-        platform = request.form.get("contact_platform", "rubika").strip().lower()
+        platform = request.form.get(
+            "contact_platform", "rubika"
+        ).strip().lower()
         if platform not in {"rubika", "telegram"}:
             platform = "rubika"
 
@@ -472,7 +515,11 @@ def add_judge():
     name = request.form.get("name", "").strip()
     rubika_id = request.form.get("rubika_id", "").strip()
     if name and rubika_id:
-        db.session.add(Judge(name=name, rubika_id=rubika_id, active=True))
+        db.session.add(Judge(
+            name=name,
+            rubika_id=rubika_id,
+            active=True
+        ))
         db.session.commit()
 
     return redirect(url_for("admin_dashboard"))
@@ -497,4 +544,8 @@ with app.app_context():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)), debug=False)
+    app.run(
+        host="0.0.0.0",
+        port=int(os.environ.get("PORT", 10000)),
+        debug=False
+    )
